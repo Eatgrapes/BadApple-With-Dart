@@ -1,0 +1,7 @@
+bad_apple
+bad_apple.exe
+*.o
+*.dill
+.dart_tool/
+.packages
+pubspec.lock
