@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            output_name: bad_apple_linux_x64
+            asset_content_type: application/x-executable
+          - os: windows-latest
+            output_name: bad_apple_windows_x64.exe
+            asset_content_type: application/vnd.microsoft.portable-executable
+          - os: macos-latest
+            output_name: bad_apple_macos_x64
+            asset_content_type: application/x-mach-binary
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - name: Install Dependencies
+        run: dart pub get
+
+      - name: Build Executable
+        run: dart compile exe BadApple.dart -o ${{ matrix.output_name }}
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.output_name }}
+          path: ${{ matrix.output_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Release v${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/bad_apple_linux_x64/bad_apple_linux_x64
+            artifacts/bad_apple_windows_x64.exe/bad_apple_windows_x64.exe
+            artifacts/bad_apple_macos_x64/bad_apple_macos_x64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
